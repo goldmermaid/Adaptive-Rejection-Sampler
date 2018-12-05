@@ -105,7 +105,7 @@ Rejection_step <- function(x_star,h,X_k,Z_k){
     accept = TRUE
   }
   else{
-    update = FALSE
+    update = TRUE
     accept = FALSE
   }
   
@@ -132,7 +132,10 @@ Initial_X <- function(h,lb,ub) {
   
   return(X_init)
 }
-
+get_densityFun <- function(density) {
+  g <- function(x){eval(parse(text = density))}
+  return(g)
+}
 
 #' Adaptive Rejection Sampling
 #'
@@ -146,11 +149,28 @@ Initial_X <- function(h,lb,ub) {
 #' @export
 
 ##########################################################################
-ars <- function(g, n, lb, ub){
-  h <- function(x){return(log(g(x)))}
+ars <- function(density, n, lb, ub){
+  ## Some simple inputs tests
+  assert_that(is.numeric(n))
+  assert_that(is.numeric(lb))
+  assert_that(is.numeric(ub))
+  if (!is.character(density)) 
+    stop("Not valid density function. Should be a density function written as a character vector")
+  if (lb >= ub) 
+    stop("Not valid domain.")
+  h <- function(x){return(log(get_densityFun(density)(x)))}
   
-  ## Test for log concave, lower bound, upper bound, ...
-  ## ...
+  ## Test for log concave, lower bound & upper bound derivative
+  if (!(gradient(h,lb)[1][1]>0)) 
+    stop("The gradient of the log density at lower bound should be bigger than 0")
+  if (!(gradient(h,ub)[1][1]<0)) 
+    stop("The gradient of the log density at upper bound should be less than 0")
+  test_array <- seq(lb,ub,0.01)
+  for (i in 1:(length(test_array)-1)){
+    gradient_diff <- gradient(h,test_array[i])[1][1] - gradient(h,test_array[i+1])[1][1]
+    if(gradient_diff < 0)
+      stop("The density function is not log concave")
+  }
   
   
   ## Initial X_k, batchsize and samples
@@ -186,4 +206,4 @@ ars <- function(g, n, lb, ub){
 
 g <- function(x){return(dnorm(x,0,1))}
 ars(g,5000,0,1)
-
+ars("dt(x,df = 3)",5000,-1,10)
