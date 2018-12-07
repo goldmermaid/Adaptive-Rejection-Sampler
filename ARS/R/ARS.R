@@ -1,4 +1,5 @@
-
+library(assertthat)
+library(rootSolve)
 ## Equation 1: Compute intersection points Z
 Intersect_Z <- function(X_k, h, lb, ub){
   
@@ -22,8 +23,6 @@ Intersect_Z <- function(X_k, h, lb, ub){
   
   return(Z)
 }
-# h <- function(x){return(log(dnorm(x)))}
-# Intersect_Z(c(-1,0,1), h, lb=-2, ub=2)
 
 
 ## Equation 2: Upper bound, U_k(x)
@@ -47,7 +46,6 @@ Integrate_ExpU_k <- function(h, X_k, Z_k){
   }
   for (i in (2:length(Z_k))){
     integ <- integrate(f=exp_u_k, lower=Z_k[i-1], upper=Z_k[i], j=i-1)$value
-    # print(integ)
     integ_sum = c(integ_sum,integ)
   }
   return(sum(unlist(integ_sum)))
@@ -132,6 +130,7 @@ Initial_X <- function(h,lb,ub) {
   
   return(X_init)
 }
+
 get_densityFun <- function(density) {
   g <- function(x){eval(parse(text = density))}
   return(g)
@@ -161,9 +160,9 @@ ars <- function(density, n, lb, ub){
   h <- function(x){return(log(get_densityFun(density)(x)))}
   
   ## Test for log concave, lower bound & upper bound derivative
-  if (!(gradient(h,lb)[1][1]>0)) 
+  if (!(gradient(h,lb)[1][1]>=0)) 
     stop("The gradient of the log density at lower bound should be bigger than 0")
-  if (!(gradient(h,ub)[1][1]<0)) 
+  if (!(gradient(h,ub)[1][1]<=0)) 
     stop("The gradient of the log density at upper bound should be less than 0")
   test_array <- seq(lb,ub,0.01)
   for (i in 1:(length(test_array)-1)){
@@ -204,6 +203,6 @@ ars <- function(density, n, lb, ub){
   return(samples[1:n])
 }
 
-g <- function(x){return(dnorm(x,0,1))}
-ars(g,5000,0,1)
-ars("dt(x,df = 3)",5000,-1,10)
+#g <- function(x){return(dnorm(x,0,1))}
+#ars(g,5000,0,1)
+#ars("dnorm(x,1,1)",500,-1,10)
