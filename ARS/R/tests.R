@@ -7,7 +7,8 @@ context("Tests for ARS() and auxiliary functions")
 # Tests for the overall function
 # Normal distribution test
 test_that("ars() used for normal dist", {
-  sample_norm <- ars("dnorm(x,0,1)",1000,-3,3) # Generate normal samples from ars()
+  g <- function(x){return(dnorm(x,0,1))}
+  sample_norm <- ars(g,1000,-3,3) # Generate normal samples from ars()
   sample_norm_cdf <- c()
   true_norm_cdf <- c()
   test_norm_interval <- seq(-3,3,0.5)# Test array
@@ -20,12 +21,13 @@ test_that("ars() used for normal dist", {
   # Take the maximum error
   max_norm_error <- max(abs(sample_norm_cdf-true_norm_cdf))
   
-  expect_lt(max_norm_error, 0.01)# Max_error should be less than the threshold
+  expect_lt(max_norm_error, 0.1)# Max_error should be less than the threshold
 })
 
 # Uniform distribution test
 test_that("ars() used for uniform dist", {
-  sample_unif <- ars("dunif(x, min = 1, max = 10)",1000,2,9) # Generate uniform samples from ars()
+  g <- function(x){return(dunif(x, min = 1, max = 10))}
+  sample_unif <- ars(g,1000,2,9) # Generate uniform samples from ars()
   sample_unif_cdf <- c()
   true_unif_cdf <- c()
   test_unif_interval <- seq(2,9,0.5)# Test array
@@ -47,7 +49,8 @@ test_that("ars() used for uniform dist", {
 
 # Gamma distribution test
 test_that("ars() used for gamma dist", {
-  sample_gamma <- ars("dgamma(x, 2, rate = 1)",1000,1,5) # Generate gamma samples from ars()
+  g <- function(x){return(dgamma(x, 2, rate = 1))}
+  sample_gamma <- ars(g,1000,1,5) # Generate gamma samples from ars()
   sample_gamma_cdf <- c()
   true_gamma_cdf <- c()
   test_gamma_interval <- seq(1,10,0.5)# Test array
@@ -150,7 +153,21 @@ test_that("Initial_X step module", {
 })
 
 # Sample_step(u, S_k, lb, ub)
-# ...
+
+test_that("Sample_step Module", {
+  # Initialization
+  lb <- -3
+  ub <- 3
+  # Suppose s(x) as normal dist pdf
+  g <- function(x){return(dnorm(x,0,1))}
+  # Calculate cdf at the boundary of x
+  cdf <- function(x) integrate(g, lb, x)$value
+  # 0.9772499 is pnorm(2,0,1)
+  f <- function(x) ((cdf(x)/cdf(ub)) -  0.9772499)
+  xstar <- uniroot(f, lower=lb, upper=ub)$root
+  
+  expect_lt((xstar - 2), 1e-5)# xstar should be really close to 2
+})
 
 # Rejection_step(x_star,h,X_k,Z_k)
 test_that("Rejection_step module", {

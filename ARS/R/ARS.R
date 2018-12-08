@@ -80,9 +80,12 @@ L_k <- function(x, h, X_k){
 ## Generate a sample from envelope S_k(x) of section 2.2.2
 Sample_step <- function(u, S_k, lb, ub){
   cdf <- function(x) integrate(S_k, lb, x)$value
-  qdf <- function(x) optimize(function(z)(cdf(z)-x)^2,c(lb,ub))$minimum
+  f <- function(x) ((cdf(x)/cdf(ub)) - u)
+  x_star <- uniroot(f, lower=lb, upper=ub)$root
+  # cdf <- function(x) integrate(S_k, lb, x)$value
+  # qdf <- function(x) optimize(function(z)(cdf(z)-x)^2,c(lb,ub))$minimum
   # rdf<-function(n) sapply(runif(n),qdf)
-  x_star <- qdf(u)
+  # x_star <- qdf(u)
   
   return(x_star)
 }
@@ -108,7 +111,7 @@ Rejection_step <- function(x_star,h,X_k,Z_k){
   }
   
   ## whether to accept candidate sample point, and whether add the point into X
-  return(c(accept=accept,update=update))
+  return(c(acc=accept,upd=update))
 }
 
 
@@ -131,11 +134,6 @@ Initial_X <- function(h,lb,ub) {
   return(X_init)
 }
 
-get_densityFun <- function(density) {
-  g <- function(x){eval(parse(text = density))}
-  return(g)
-}
-
 #' Adaptive Rejection Sampling
 #'
 #' Based on the Gilks & Wild (1992) paper
@@ -148,16 +146,14 @@ get_densityFun <- function(density) {
 #' @export
 
 ##########################################################################
-ars <- function(density, n, lb, ub){
+ars <- function(g, n, lb, ub){
   ## Some simple inputs tests
   assert_that(is.numeric(n))
   assert_that(is.numeric(lb))
   assert_that(is.numeric(ub))
-  if (!is.character(density)) 
-    stop("Not valid density function. Should be a density function written as a character vector")
   if (lb >= ub) 
     stop("Not valid domain.")
-  h <- function(x){return(log(get_densityFun(density)(x)))}
+  h <- function(x){return(log(g(x)))}
   
   ## Test for log concave, lower bound & upper bound derivative
   if (!(gradient(h,lb)[1][1]>=0)) 
@@ -191,10 +187,9 @@ ars <- function(density, n, lb, ub){
     out <- sapply(X_stars, Rejection_step, h=h, X_k=X_k, Z_k=Z_k)
     X_accepts <- out[1,]
     X_to_adds <- out[2,]
-    
     ## Updating step
-    samples = c(samples, X_stars[X_accepts>0])
-    X_k = sort(c(X_k, X_stars[X_to_adds>0]))
+    samples = c(samples, X_stars[X_accepts=TRUE])
+    X_k = sort(c(X_k, X_stars[X_to_adds=TRUE]))
     
     ## Update batchsize for next loop
     batchsize <- n-length(samples)
@@ -203,6 +198,3 @@ ars <- function(density, n, lb, ub){
   return(samples[1:n])
 }
 
-#g <- function(x){return(dnorm(x,0,1))}
-#ars(g,5000,0,1)
-#ars("dnorm(x,1,1)",500,-1,10)
